@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1050" viewBox="0 0 1800 1050">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<style>
+    text { font-family: Arial, Helvetica, sans-serif; }
+    .title { font-family: Georgia, 'Times New Roman', serif; }
+</style>
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L8,3 z" fill="#222"/>
+  </marker>
+</defs>
+
+<text class="title" x="900.0" y="90" font-size="46" font-weight="700" fill="#111" text-anchor="middle">Overview of the compound corruption benchmark</text>
+<line x1="130" y1="124" x2="1670" y2="124" stroke="#222" stroke-width="2"/>
+<rect x="55" y="215" width="285" height="470" rx="14" fill="#F5FAFF" stroke="#174A7C" stroke-width="3"/>
+<text x="197.5" y="273" font-size="28" font-weight="700" fill="#174A7C" text-anchor="middle">Dataset suite</text>
+<circle cx="83" cy="322" r="5.5" fill="#174A7C"/>
+<text x="107" y="330" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="107" dy="0">24 real PMLB</tspan>
+<tspan x="107" dy="30.5">tabular datasets</tspan>
+</text>
+<circle cx="83" cy="412" r="5.5" fill="#174A7C"/>
+<text x="107" y="420" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="107" dy="0">Binary and multiclass</tspan>
+<tspan x="107" dy="30.5">classification</tspan>
+</text>
+<circle cx="83" cy="502" r="5.5" fill="#174A7C"/>
+<text x="107" y="510" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="107" dy="0">Inclusion/exclusion</tspan>
+<tspan x="107" dy="30.5">screening</tspan>
+</text>
+<circle cx="83" cy="592" r="5.5" fill="#174A7C"/>
+<text x="107" y="600" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="107" dy="0">Dataset manifest</tspan>
+</text>
+<line x1="344" y1="450.0" x2="372" y2="450.0" stroke="#222" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="382" y="215" width="285" height="470" rx="14" fill="#FFF8F2" stroke="#B84A1B" stroke-width="3"/>
+<text x="524.5" y="273" font-size="28" font-weight="700" fill="#B84A1B" text-anchor="middle">Corruption grid</text>
+<circle cx="410" cy="322" r="5.5" fill="#B84A1B"/>
+<text x="434" y="330" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="434" dy="0">Label noise:</tspan>
+<tspan x="434" dy="30.5">0, 0.1, 0.2, 0.3</tspan>
+</text>
+<circle cx="410" cy="412" r="5.5" fill="#B84A1B"/>
+<text x="434" y="420" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="434" dy="0">MCAR missingness:</tspan>
+<tspan x="434" dy="30.5">0, 0.1, 0.2, 0.3</tspan>
+</text>
+<circle cx="410" cy="502" r="5.5" fill="#B84A1B"/>
+<text x="434" y="510" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="434" dy="0">Class imbalance:</tspan>
+<tspan x="434" dy="30.5">natural, 0.7, 0.8, 0.9</tspan>
+</text>
+<circle cx="410" cy="592" r="5.5" fill="#B84A1B"/>
+<text x="434" y="600" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="434" dy="0">Full factorial design:</tspan>
+<tspan x="434" dy="30.5">64 settings</tspan>
+</text>
+<line x1="671" y1="450.0" x2="699" y2="450.0" stroke="#222" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="709" y="215" width="285" height="470" rx="14" fill="#F6FCF6" stroke="#1D5E2A" stroke-width="3"/>
+<text x="851.5" y="273" font-size="28" font-weight="700" fill="#1D5E2A" text-anchor="middle">Model evaluation</text>
+<circle cx="737" cy="322" r="5.5" fill="#1D5E2A"/>
+<text x="761" y="330" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="761" dy="0">9 classifiers</tspan>
+</text>
+<circle cx="737" cy="388" r="5.5" fill="#1D5E2A"/>
+<text x="761" y="396" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="761" dy="0">5 random seeds</tspan>
+</text>
+<circle cx="737" cy="454" r="5.5" fill="#1D5E2A"/>
+<text x="761" y="462" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="761" dy="0">Primary metric:</tspan>
+<tspan x="761" dy="30.5">Macro-F1</tspan>
+</text>
+<circle cx="737" cy="544" r="5.5" fill="#1D5E2A"/>
+<text x="761" y="552" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="761" dy="0">Secondary: balanced</tspan>
+<tspan x="761" dy="30.5">accuracy, accuracy,</tspan>
+<tspan x="761" dy="30.5">MCC, minority recall</tspan>
+</text>
+<line x1="998" y1="450.0" x2="1026" y2="450.0" stroke="#222" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="1036" y="215" width="285" height="470" rx="14" fill="#FAF7FF" stroke="#4A2A70" stroke-width="3"/>
+<text x="1178.5" y="273" font-size="28" font-weight="700" fill="#4A2A70" text-anchor="middle">Interaction analysis</text>
+<circle cx="1064" cy="322" r="5.5" fill="#4A2A70"/>
+<text x="1088" y="330" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1088" dy="0">Single drops: ΔA, ΔB, ΔC</tspan>
+</text>
+<circle cx="1064" cy="388" r="5.5" fill="#4A2A70"/>
+<text x="1088" y="396" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1088" dy="0">Expected: Δexp = ΔA + ΔB</tspan>
+</text>
+<circle cx="1064" cy="454" r="5.5" fill="#4A2A70"/>
+<text x="1088" y="462" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1088" dy="0">Observed: Δobs</tspan>
+</text>
+<circle cx="1064" cy="520" r="5.5" fill="#4A2A70"/>
+<text x="1088" y="528" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1088" dy="0">Interaction: I = Δobs − Δexp</tspan>
+</text>
+<circle cx="1064" cy="586" r="5.5" fill="#4A2A70"/>
+<text x="1088" y="594" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1088" dy="0">I &gt; 0 indicates</tspan>
+<tspan x="1088" dy="30.5">super-additive harm</tspan>
+</text>
+<line x1="1325" y1="450.0" x2="1353" y2="450.0" stroke="#222" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="1363" y="215" width="285" height="470" rx="14" fill="#F4FCFC" stroke="#0A5E63" stroke-width="3"/>
+<text x="1505.5" y="273" font-size="28" font-weight="700" fill="#0A5E63" text-anchor="middle">Validation studies</text>
+<circle cx="1391" cy="322" r="5.5" fill="#0A5E63"/>
+<text x="1415" y="330" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1415" dy="0">XGBoost and LightGBM</tspan>
+<tspan x="1415" dy="30.5">extension</tspan>
+</text>
+<circle cx="1391" cy="412" r="5.5" fill="#0A5E63"/>
+<text x="1415" y="420" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1415" dy="0">Imputation ablation</tspan>
+</text>
+<circle cx="1391" cy="478" r="5.5" fill="#0A5E63"/>
+<text x="1415" y="486" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1415" dy="0">Order sensitivity</tspan>
+</text>
+<circle cx="1391" cy="544" r="5.5" fill="#0A5E63"/>
+<text x="1415" y="552" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1415" dy="0">Class-dependent noise</tspan>
+</text>
+<circle cx="1391" cy="610" r="5.5" fill="#0A5E63"/>
+<text x="1415" y="618" font-size="25" font-weight="400" fill="#111" text-anchor="start">
+<tspan x="1415" dy="0">Dataset-clustered</tspan>
+<tspan x="1415" dy="30.5">statistics</tspan>
+</text>
+<rect x="55" y="765" width="1690" height="130" rx="12" fill="#FFF8F8" stroke="#8A1F1F" stroke-width="3"/>
+<text x="97" y="842" font-size="28" font-weight="700" fill="#8A1F1F">Main findings</text>
+<line x1="355" y1="790" x2="355" y2="870" stroke="#555" stroke-width="1.7"/>
+<line x1="815" y1="790" x2="815" y2="870" stroke="#555" stroke-width="1.7"/>
+<line x1="1265" y1="790" x2="1265" y2="870" stroke="#555" stroke-width="1.7"/>
+<text x="415" y="819" font-size="25" font-weight="400" fill="#111" text-anchor="middle">
+<tspan x="415" dy="0">Noise + imbalance:</tspan>
+<tspan x="415" dy="30.5">strongest harmful interaction</tspan>
+</text>
+<text x="930" y="819" font-size="25" font-weight="400" fill="#111" text-anchor="middle">
+<tspan x="930" dy="0">All three corruptions:</tspan>
+<tspan x="930" dy="30.5">consistently harmful</tspan>
+</text>
+<text x="1370" y="819" font-size="25" font-weight="400" fill="#111" text-anchor="middle">
+<tspan x="1370" dy="0">Accuracy masks</tspan>
+<tspan x="1370" dy="30.5">imbalance-related degradation</tspan>
+</text>
+</svg>

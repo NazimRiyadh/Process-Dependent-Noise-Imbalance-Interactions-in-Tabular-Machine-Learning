@@ -1,0 +1,34 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:            interaction   R-squared:                       0.386
+Model:                            OLS   Adj. R-squared:                  0.386
+Method:                 Least Squares   F-statistic:                     27.58
+Date:                Fri, 12 Jun 2026   Prob (F-statistic):           1.84e-10
+Time:                        14:29:27   Log-Likelihood:                 23426.
+No. Observations:               29160   AIC:                        -4.683e+04
+Df Residuals:                   29149   BIC:                        -4.674e+04
+Df Model:                          10                                         
+Covariance Type:              cluster                                         
+=========================================================================================================
+                                            coef    std err          z      P>|z|      [0.025      0.975]
+---------------------------------------------------------------------------------------------------------
+Intercept                                -0.0272      0.008     -3.379      0.001      -0.043      -0.011
+C(combination)[T.noise_imbalance]         0.1469      0.016      8.945      0.000       0.115       0.179
+C(combination)[T.noise_missing]          -0.0467      0.008     -6.169      0.000      -0.062      -0.032
+C(model_name)[T.ExtraTrees]               0.0649      0.013      5.129      0.000       0.040       0.090
+C(model_name)[T.HistGradientBoosting]     0.0772      0.009      9.000      0.000       0.060       0.094
+C(model_name)[T.KNN]                      0.0367      0.008      4.623      0.000       0.021       0.052
+C(model_name)[T.LightGBM]                 0.0711      0.007      9.703      0.000       0.057       0.085
+C(model_name)[T.LinearSVM]                0.0699      0.011      6.576      0.000       0.049       0.091
+C(model_name)[T.LogisticRegression]       0.0654      0.008      8.128      0.000       0.050       0.081
+C(model_name)[T.RandomForest]             0.0744      0.011      6.780      0.000       0.053       0.096
+C(model_name)[T.XGBoost]                  0.0745      0.007     11.261      0.000       0.062       0.087
+==============================================================================
+Omnibus:                     4890.165   Durbin-Watson:                   0.760
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):            14866.840
+Skew:                           0.876   Prob(JB):                         0.00
+Kurtosis:                       6.028   Cond. No.                         10.9
+==============================================================================
+
+Notes:
+[1] Standard Errors are robust to cluster correlation (cluster)

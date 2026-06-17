@@ -1,0 +1,7 @@
+mitigation,combination,interaction
+class_weight,all_three_excess_over_singles,0.1237630446114846
+class_weight,noise_imbalance,0.1192066661437876
+none,all_three_excess_over_singles,0.20754088698942733
+none,noise_imbalance,0.21494402356849054
+random_oversample,all_three_excess_over_singles,0.11748237313910107
+random_oversample,noise_imbalance,0.11255669253670277

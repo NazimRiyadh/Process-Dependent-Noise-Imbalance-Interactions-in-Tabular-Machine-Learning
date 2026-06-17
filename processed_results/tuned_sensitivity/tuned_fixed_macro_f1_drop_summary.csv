@@ -1,0 +1,17 @@
+variant,setting_name,macro_f1_drop
+default,all_three,0.26866362525075127
+default,clean,0.0
+default,imbalance_only,0.0935684954965001
+default,missing_imbalance,0.14816973273760484
+default,missing_only,0.04860833198850796
+default,noise_imbalance,0.24243286322856322
+default,noise_missing,0.08746462425285748
+default,noise_only,0.03942282998765297
+tuned,all_three,0.28470511989076097
+tuned,clean,0.0
+tuned,imbalance_only,0.10965729303213734
+tuned,missing_imbalance,0.16151310028272814
+tuned,missing_only,0.053581468536982604
+tuned,noise_imbalance,0.25768928610113706
+tuned,noise_missing,0.08841012227711052
+tuned,noise_only,0.039825325700277886

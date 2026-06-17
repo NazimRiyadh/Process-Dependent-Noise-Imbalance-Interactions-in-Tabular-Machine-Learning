@@ -1,0 +1,10 @@
+source_zip,dataset_name,model_name,n_failed
+final_experiment_v1,adult,XGBoost,320
+final_experiment_v1,clean2,XGBoost,320
+final_experiment_v1,mushroom,XGBoost,320
+final_experiment_v2,hypothyroid,XGBoost,320
+final_experiment_v2,kr_vs_kp,XGBoost,320
+final_experiment_v2,magic,XGBoost,320
+final_experiment_v3_1_,phoneme,XGBoost,320
+final_experiment_v4,spambase,XGBoost,320
+final_experiment_v5,tic_tac_toe,XGBoost,320

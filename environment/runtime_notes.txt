@@ -1,0 +1,1 @@
+Primary experiments were run on Kaggle notebooks with fixed random seeds. PMLB and OpenML datasets are fetched by public loaders and are not redistributed in this package. The archive contains run-level outputs and processed analysis files used by the manuscript.

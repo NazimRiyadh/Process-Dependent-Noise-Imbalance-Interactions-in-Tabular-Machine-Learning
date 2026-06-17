@@ -1,0 +1,487 @@
+
+\documentclass[preprint,12pt,number]{elsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{float}
+\usepackage{adjustbox}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{placeins}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{lineno}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\journal{Machine Learning with Applications}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Process-Dependent Noise--Imbalance Interactions in Tabular Machine Learning: A Compound Data-Quality Benchmark}
+
+\author[inst1]{Anonymous Author(s)}
+\affiliation[inst1]{organization={Anonymous institution}, city={Anonymous city}, country={Anonymous country}}
+
+
+\begin{abstract}
+Tabular machine-learning pipelines often combine several data-quality failures, yet robustness is usually measured one failure at a time. This paper contributes a matched estimand and reproducible evaluation protocol for compound data-quality interaction: the excess degradation of a joint corruption relative to matched single-corruption drops from the same dataset, model, seed, and severity level. Rather than introducing another classifier, the study evaluates when single-corruption curves fail to explain joint tabular failure modes. Across 24 PMLB datasets, 9 classifiers, 64 corruption settings, and 5 seeds, the dominant interaction is label noise followed by class imbalance when the imbalance step uses observed corrupted labels. The observed Macro-F1 drop is 0.388 versus an additive expectation of 0.209, giving a mean interaction of +0.179 with a dataset-clustered 95\% confidence interval of [0.136, 0.224]. Process controls show why order matters: at the moderate setting, the interaction is +0.184 under observed-label sampling but falls to +0.023 when imbalance is induced from clean labels and labels are corrupted afterward; fixed-retained-index (+0.225) and equal-training-size (+0.166) controls rule out simpler size-only explanations. Mechanism diagnostics show that the process reduces clean minority evidence while retaining mislabeled examples. OpenML replication preserves the qualitative ranking with smaller magnitude, and mitigation baselines show that class weighting and oversampling reduce but do not eliminate the interaction. Missingness is included in the factorial benchmark, but under the tested MCAR, MAR-style, and MNAR-style mechanisms it is not the dominant excess-interaction driver. The main practical implication is that noisy labels and class imbalance should be evaluated jointly when observed labels influence filtering, sampling, case enrichment, or benchmark construction.
+\end{abstract}
+
+\begin{keyword}
+Data quality \sep Robustness \sep Label noise \sep Class imbalance \sep Missing data \sep Tabular machine learning \sep Interaction effects
+\end{keyword}
+
+\end{frontmatter}
+
+
+
+\section*{Highlights}
+\begin{itemize}
+    \item We define an estimand/protocol for compound tabular data-quality interaction.
+    \item The benchmark tests whether matched single-corruption curves explain joint degradation.
+    \item The dominant effect is process-dependent noise--imbalance amplification.
+    \item Process controls separate observed-label sampling from clean-label and size-only effects.
+    \item Missingness is included as a benchmark factor but is not the dominant interaction here.
+\end{itemize}
+
+\section{Introduction}
+
+Machine-learning models are often evaluated as if data-quality problems occur one at a time. A classifier may be tested under label noise, or under class imbalance, or under missing values. In deployed tabular systems, however, these failures frequently co-occur. A clinical dataset can contain miscoded outcomes, missing laboratory measurements, and rare disease subtypes. A credit-risk dataset can contain incomplete customer attributes, skewed default rates, and labels derived from delayed or disputed events. This is the setting emphasized by data-centric AI: model behaviour is shaped not only by architecture, but also by data construction, maintenance, documentation, and failure modes \citep{sambasivan2021data,zha2025datacentric,paullada2021data,hooker2021moving}.
+
+The methodological problem is that single-corruption evaluation makes an implicit additivity assumption. If label noise alone reduces Macro-F1 by 0.08 and class imbalance alone reduces it by 0.12, independent robustness curves suggest that their joint effect should be around 0.20. If the measured joint drop is much larger, single-corruption evaluation underestimates deployment risk. If it is smaller, the corruptions overlap or saturate. Either way, marginal robustness curves are incomplete because they cannot say whether two failures amplify, cancel, or simply duplicate each other.
+
+Recent work gives strong reasons to study data-quality failures, but usually treats interaction as secondary. Mohammed et al. \citep{mohammed2025effects} evaluate several data-quality dimensions on tabular data and distinguish polluted training and test data. CLIMB provides a large benchmark for imbalanced tabular learning \citep{liu2025climb}. OpenML-CC18 and TabZilla illustrate the importance of broad, reproducible tabular benchmarking \citep{bischl2021openml,mcelfresh2023tabzilla,grinsztajn2022tree}. These studies motivate this paper, but they do not make non-additive interaction among label noise, missingness, and imbalance the central response variable.
+
+The novelty claimed here is deliberately narrow and should be read as an estimand/protocol contribution rather than as a new learning method or a new robustness theory. Factorial contrasts, additive baselines, label-noise analysis, imbalance analysis, missing-data analysis, and tabular benchmarking are all established. What this paper contributes is a reproducible protocol for measuring compound tabular data-quality interaction: for each matched dataset, model, seed, and severity level, observed compound degradation is compared with the additive degradation predicted from the corresponding single-corruption runs. This makes the response variable the interaction contrast itself, not a model leaderboard or a generic corrupted-performance score.
+
+The resulting scientific question is narrower and more diagnostic: when common tabular data-quality failures co-occur, is the damage predictable from matched single-corruption effects, and does that answer change when the data-construction process changes? We answer using a full factorial benchmark over three axes: label-level failure (label noise), feature-level failure (missing values), and distribution-level failure (class imbalance). The key empirical finding is that label noise and class imbalance become strongly non-additive when label corruption occurs before imbalance formation and the later class-ratio construction uses observed corrupted labels. Reversing or controlling the process makes the same nominal corruption pair much closer to additive. Thus, the strongest message is not simply ``noise + imbalance is harmful''; it is that corruption order and sampling frame determine whether nominally identical failures are additive or super-additive.
+
+The main contributions are as follows.
+\begin{enumerate}
+    \item We define a matched additive-null estimand for compound tabular data-quality interaction and use it as a measurement protocol for benchmarking data-construction processes.
+    \item We implement the estimand in a reproducible factorial benchmark across 24 real PMLB datasets, 9 classifiers, 64 corruption settings, and 5 random seeds, with Macro-F1 as the primary metric and balanced accuracy, MCC, accuracy, and minority recall as secondary metrics.
+    \item We show that the dominant harmful effect is process-dependent: label noise followed by observed-label imbalance is strongly super-additive, whereas reversing the order or forming imbalance from clean labels greatly reduces the interaction.
+    \item We add process-control diagnostics, PMLB mechanism diagnostics, and dataset-level correlations showing that the large effect is tied to the sampling frame: clean minority evidence is reduced while mislabeled retained examples remain non-trivial.
+    \item We bound the claim with external OpenML replication, transformed-scale checks, cluster-robust regression, targeted missingness sensitivities, clean-data tuning sensitivity, and compact mitigation baselines, while keeping missingness conclusions explicitly secondary to the noise--imbalance process result.
+\end{enumerate}
+
+In short, the paper should be read as a controlled diagnostic benchmark: it measures when marginal data-quality robustness curves fail to explain joint degradation, and it shows that the largest failure arises from an observed-label sampling process that is plausible in real tabular pipelines.
+
+\section{Related work}
+
+\subsection{Data-centric AI and data-quality evaluation}
+
+Data-centric AI emphasizes that model reliability depends on the quality, representativeness, and maintenance of data, not only on the learning algorithm \citep{zha2025datacentric}. Data cascades show how upstream data defects can propagate into downstream system failures in ways that are hard to diagnose after deployment \citep{sambasivan2021data}. Dataset construction, documentation, and collection choices also shape benchmark validity and model behaviour \citep{paullada2021data,hooker2021moving}. More directly related to this paper, Mohammed et al. \citep{mohammed2025effects} study several data-quality dimensions on tabular data and show that different pollution types can affect downstream performance. Our work uses this data-quality perspective but shifts the estimand: the object of analysis is not only the performance under a polluted dataset, but the deviation of a compound-pollution result from matched single-factor expectations.
+
+\subsection{Label noise, class imbalance, and their overlap}
+
+Label noise has been extensively studied in both classical and deep learning settings. Fr\'enay and Verleysen \citep{frenay2014classification} survey label-noise mechanisms and classifier sensitivity; more recent surveys and benchmark studies show that noisy labels can distort optimization and destabilize model comparison \citep{song2022learning,northcutt2021pervasive,wei2022learning,li2024noisy}. Class imbalance is likewise central in domains where minority classes correspond to rare but important events; standard treatments include resampling and cost-sensitive learning, and accuracy is known to be insufficient under skewed class distributions \citep{chawla2002smote,he2009learning,johnson2019survey,chen2024imbalanced}. CLIMB provides a recent large benchmark for imbalanced tabular learning \citep{liu2025climb}. Several recent studies consider settings where imbalance and label noise co-occur, especially in active learning or domain-specific classification \citep{nuggehalli2024direct,khanal2024active}. These works motivate the practical relevance of the noise--imbalance pair. Our study differs by isolating the interaction statistically: it asks whether joint damage exceeds the additive expectation obtained from single-noise and single-imbalance drops.
+
+\subsection{Missing values and imputation}
+
+Missing data is a long-standing statistical problem. Rubin \citep{rubin1976inference}, Little and Rubin \citep{little2019statistical}, and van Buuren \citep{vanbuuren2018flexible} distinguish missingness mechanisms and imputation assumptions. Practical ML pipelines often use simple imputation, although imputation can introduce bias when missingness is informative \citep{schafer2002missing,sterne2009multiple}. In our main benchmark, missingness is introduced under MCAR and handled through imputation inside each model pipeline. We therefore interpret missingness results within this scope and add MAR and MNAR-style sensitivity checks to avoid overclaiming from the benign MCAR setting.
+
+\subsection{Tabular ML benchmarking and robustness}
+
+Tabular benchmarking has become more systematic. PMLB provides a curated suite for supervised learning comparisons \citep{olson2017pmlb}; OpenML and OpenML benchmarking suites support reproducible multi-dataset experiments \citep{vanschoren2014openml,bischl2021openml}; and TabZilla shows that the choice between boosted trees and neural networks depends strongly on dataset properties and tuning \citep{mcelfresh2023tabzilla}. Other recent tabular benchmarks also highlight the need to separate clean-data strength from robust degradation behaviour \citep{grinsztajn2022tree,shmuel2024comprehensive}. Statistical comparison across datasets requires care because repeated measurements over datasets, models, seeds, and corruptions are not independent \citep{demsar2006statistical,dietterich1998approximate,nadeau2003inference,bouthillier2021accounting,lones2024pitfalls}. We therefore report dataset-clustered summaries and treat run-level repetitions as measurements nested within datasets.
+
+Robustness benchmarks in computer vision and distribution shift have shown that clean aggregate performance can hide fragility under perturbations \citep{hendrycks2019benchmarking,mu2019mnistc,koh2021wilds}. Work on multiple perturbations also shows that robustness to one perturbation need not imply robustness to another or to their combination \citep{tramer2019adversarial}. Our contribution brings this interaction perspective to tabular data-quality failures.
+
+\input{tables/table_prior_work_comparison.tex}
+
+This comparison clarifies the scope of the contribution. The paper does not claim that label noise, imbalance, missingness, factorial contrasts, or tabular benchmarking are new topics. The contribution is the operational estimand and protocol for compound data-quality interaction in tabular classification, together with the empirical demonstration that the interaction depends on the order and sampling frame of the data-construction process.
+\section{Interaction formulation}
+
+The interaction score is a diagnostic contrast, not a causal estimand by itself. It formalizes a counterfactual benchmark question: if the single-corruption degradation curves were sufficient, what loss would we expect under their combination? A positive interaction means that the data-construction process has created more degradation than the single-factor curves predict; a negative interaction means overlap, saturation, or partial redundancy among failures. This is analogous to interaction terms in factorial experimental design, but adapted to bounded predictive-performance metrics and repeated benchmark measurements.
+
+We use matched severity levels to avoid mixing qualitatively different corruption intensities. All single-factor terms are computed for the same dataset, model, seed, and severity level as the corresponding compound condition. This matching is important because performance drops vary with the baseline dataset, the model family, and the corruption intensity.
+
+Let $P_0$ denote model performance on a clean training/test protocol, using a metric such as Macro-F1. For a corruption $A$, let $P_A$ be performance under that corruption and define the performance drop
+\begin{equation}
+    \Delta_A = P_0 - P_A.
+\end{equation}
+For a pair of corruptions $A$ and $B$, the matched additive expectation is
+\begin{equation}
+    \Delta^{\mathrm{exp}}_{AB} = \Delta_A + \Delta_B.
+\end{equation}
+The observed combined drop is
+\begin{equation}
+    \Delta^{\mathrm{obs}}_{AB} = P_0 - P_{AB}.
+\end{equation}
+We define the raw pairwise interaction as
+\begin{equation}
+    I_{AB} = \Delta^{\mathrm{obs}}_{AB} - \Delta^{\mathrm{exp}}_{AB}.
+\end{equation}
+Positive values indicate super-additive harm relative to the additive reference; negative values indicate sub-additivity, overlap, or saturation; values near zero indicate approximate additivity.
+
+For the three-corruption setting, we report the excess over single-factor additivity,
+\begin{equation}
+    I^{\mathrm{SF}}_{ABC}=\Delta^{\mathrm{obs}}_{ABC}-(\Delta_A+\Delta_B+\Delta_C).
+\end{equation}
+This quantity is useful because it asks whether the all-three condition is worse than the sum of the three single corruptions. It is not, however, a pure three-way factorial interaction because it still contains pairwise interaction components. For clarity, we also compute the pure residual
+\begin{equation}
+    I^{\mathrm{pure}}_{ABC}=I^{\mathrm{SF}}_{ABC}-I_{AB}-I_{AC}-I_{BC},
+\end{equation}
+where each pairwise term is matched to the same severity levels. We therefore refer to the main all-three result as ``excess over single-factor additivity'' rather than as a pure three-way interaction.
+
+The raw interaction is retained because it is directly interpretable as excess performance-point degradation. However, performance metrics such as Macro-F1 are bounded below by zero, so an additive expected drop can approach or exceed the maximum possible degradation $P_0$. To address this, we report bounded-scale checks alongside the raw score. The bounded expected-drop interaction is
+\begin{equation}
+    I^{\mathrm{bounded}}_{AB}=\Delta^{\mathrm{obs}}_{AB}-\min(\Delta^{\mathrm{exp}}_{AB},P_0).
+\end{equation}
+We also report a relative-clean interaction,
+\begin{equation}
+    I^{\mathrm{rel}}_{AB}=\frac{I_{AB}}{P_0+\epsilon},
+\end{equation}
+with $\epsilon=0.02$ for numerical stability. The raw score answers the practical question ``how many additional performance points are lost?''; the bounded and relative scores check whether the same qualitative conclusion holds after accounting for degradation headroom and clean performance.
+
+\section{Experimental design}
+
+\subsection{Datasets}
+
+The main benchmark uses 24 real classification datasets from PMLB \citep{olson2017pmlb}. Dataset selection followed explicit screening rules: retained datasets had to load reproducibly through the PMLB interface used in the execution environment; contain enough rows and minority-class support for induced-imbalance experiments; and avoid obvious near-duplicates when a closely related PMLB variant was already included. For large datasets, a stratified row cap of 20,000 examples was applied before train/test splitting. Table~\ref{tab:dataset_summary} summarizes the selected collection and Table~\ref{tab:dataset_selection_audit} reports the selection and reproducibility audit. The complete retained manifest, representative exclusions, and screening scripts are supplied in the reproducibility package rather than expanded in the main text.
+
+\input{tables/table_dataset_summary.tex}
+\input{tables/table_dataset_selection_audit.tex}
+% Extended manifest/exclusion tables are provided in the reproducibility package.
+
+The main PMLB suite is deliberately dense rather than maximal: it supports a full factorial design with 64 corruption settings, 9 model families, 5 seeds, and multiple validation branches. To address the possibility that the effect is specific to PMLB, we add an independent OpenML replication in Section~\ref{sec:external_replication}.
+
+\subsection{Models}
+
+We evaluate nine classifiers representing linear, margin-based, distance-based, tree, ensemble, and boosting families: logistic regression, linear SVM, $k$-nearest neighbours, decision tree, random forest, ExtraTrees, histogram gradient boosting, XGBoost, and LightGBM \citep{pedregosa2011scikit,quinlan1986induction,cortes1995support,breiman2001random,chen2016xgboost,ke2017lightgbm}. The goal is not to tune each model to its maximum clean-data performance, but to compare model families under a common corruption protocol. Table~\ref{tab:hyperparameters} reports the preprocessing and configuration used for each model. All randomised models use the experiment seed; failures in early XGBoost runs were re-run with task-specific binary or multiclass objectives before the nine-model analysis was created.
+
+\input{tables/table_hyperparameters.tex}
+
+\subsection{Corruption factors}
+
+We study three corruption axes.
+\begin{itemize}
+    \item \textbf{Label noise:} a fraction of training labels is replaced by another class label. The main benchmark uses symmetric random label noise with levels $0,0.1,0.2,0.3$.
+    \item \textbf{Missing values:} feature entries are removed under MCAR with levels $0,0.1,0.2,0.3$. Missingness is applied to train and test features and handled inside each pipeline through imputation. The main missingness conclusions should therefore be read as conclusions about controlled MCAR missingness under standard imputation, not as claims about all MAR or MNAR mechanisms.
+    \item \textbf{Class imbalance:} the training set is subsampled to induce majority-class ratios of natural, $0.7$, $0.8$, or $0.9$. ``Natural'' means that no artificial class subsampling is applied after the train/test split. For multiclass tasks, the majority ratio is the proportion of the largest class. Non-majority examples are subsampled while preserving at least one example from each remaining class where feasible. The test split is not artificially rebalanced after splitting, preserving evaluation consistency across settings.
+\end{itemize}
+The full factorial grid therefore contains $4\times4\times4=64$ corruption settings per dataset, model, and seed. Five random seeds are used.
+
+The primary corruption process applies label noise before induced imbalance. In that primary order, the induced-imbalance step is computed using the observed training labels after noise injection, not the original labels. Thus, the sampling frame used to create the target majority ratio can itself be label-corrupted. This process is not chosen merely for convenience. It reflects common data-building situations in which labels are assigned before later filtering or sampling is performed: a claims or credit-risk table may be downsampled after outcomes have been coded from delayed or disputed records; a fraud, moderation, or defect dataset may be class-balanced after weak labels or reviewer labels have already entered the table; a clinical registry may be case-enriched using diagnostic codes that include miscoding; and benchmark or internal training sets may be constructed by undersampling the observed majority class after noisy annotations are already attached. In all of these cases, the labels used to decide which rows are majority or minority are the operational observed labels, not unavailable ground truth.
+
+Because this process definition is central to the paper, order and sampling-frame controls are treated as main analyses rather than peripheral validation. Table~\ref{tab:imbalance_algorithm} gives the exact induced-imbalance algorithm, including majority-class selection, multiclass non-majority sampling, infeasible-target handling, and the zero-division convention used for Macro-F1. Post-corruption training-size and nominal minority-count diagnostics are included in the reproducibility package.
+
+\input{tables/table_imbalance_algorithm.tex}
+% Sampling diagnostics table moved to reproducibility package.
+
+\subsection{Splitting, preprocessing, and evaluation protocol}
+
+For every dataset and seed, data are split into train and test partitions using stratified sampling before any corruption is applied. Corruptions are then applied only according to the protocol: label noise and induced imbalance affect the training data, while missing values affect both train and test features. Imputation, scaling, and model fitting are performed inside the training pipeline so that test data do not inform preprocessing statistics. The main grid contains 64 corruption settings, 9 models, 24 datasets, and 5 seeds, giving 69,120 model evaluations in the completed nine-model benchmark.
+
+\subsection{Metrics and statistical analysis}
+
+Macro-F1 is the primary metric because class imbalance is one of the studied corruptions and accuracy can be misleading under skewed class distributions \citep{he2009learning,johnson2019survey}. We also report balanced accuracy, accuracy, MCC, and minority recall. Interaction effects are first computed at the dataset--model--seed--setting level. Pairwise summaries average over all matched nonzero severity combinations: for example, a noise + imbalance interaction at label-noise level $n$ and majority ratio $r$ uses the combined condition $(n,0,r)$ and subtracts the single-noise drop $(n,0,\mathrm{natural})$ and the single-imbalance drop $(0,0,r)$ from the same dataset, model, and seed. Noise + missing and missing + imbalance are computed analogously; all-three single-factor excess averages over all nonzero triples $(n,m,r)$ and subtracts the three matched single-corruption drops. Clean and natural-imbalance baselines are not mixed across severity levels.
+
+For inferential reporting, we aggregate interaction values at the dataset level. The main confidence intervals are dataset-clustered bootstrap intervals using 10,000 resamples of the 24 datasets. Hypothesis tests use Wilcoxon signed-rank tests on dataset-level mean interactions against zero, with Holm correction where multiple metric-combination tests are reported \citep{wilcoxon1945individual,holm1979simple,efron1993introduction}. To reduce dependence on one aggregation convention, the final reproducibility audit adds run-level cluster-robust regression with dataset-clustered standard errors, a mixed-effects check with datasets as grouping units, a logit-transformed Macro-F1 interaction check, and equal-row/equal-dataset/equal-dataset--model weighting checks. Table~\ref{tab:statistical_reporting} reports the dataset-clustered Macro-F1 statistics used in the main claims.
+
+\input{tables/table_statistical_reporting.tex}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/fig1_workflow.pdf}
+    \caption{Overview of the compound-corruption benchmark. The figure summarizes the screened PMLB dataset suite, corruption grid, model evaluation, interaction scoring, validation analyses, and main empirical patterns.}
+    \label{fig:workflow}
+\end{figure}
+
+\section{Main results}
+
+This section follows the core evidential chain of the paper: first, the matched interaction estimand identifies the main excess degradation; second, process-order and sampling-frame controls show that the effect is process-dependent; third, mechanism diagnostics explain the effect through clean-minority evidence and retained mislabeled examples; and fourth, secondary analyses bound the claim without turning the paper into a generic robustness leaderboard.
+
+\subsection{Compound corruptions are not reliably additive}
+
+Table~\ref{tab:main_interactions} and Figure~\ref{fig:main_interactions} summarize the main Macro-F1 interactions. The largest effect is the noise + imbalance interaction. Across 24 datasets and 9 models, the observed Macro-F1 drop is 0.388, while the expected additive drop from noise alone and imbalance alone is 0.209. The mean interaction is therefore +0.179. The dataset-clustered confidence interval is [0.136, 0.224], and 95.8\% of datasets show a positive dataset-level interaction.
+
+The all-three condition shows a positive excess over single-factor additivity (+0.164), but this value should not be interpreted as a pure three-way interaction. As shown in Table~\ref{tab:three_corruption_decomposition}, the matched pure three-way residual is slightly negative on average (-0.033), meaning that the all-three excess is largely explained by the strong noise + imbalance pairwise component. Missing + imbalance is mildly super-additive (+0.032). Noise + missing is mildly sub-additive (-0.015), indicating that, under MCAR missingness and simple imputation, these two corruptions do not amplify one another in the same way that noise and imbalance do.
+
+\input{tables/table_main_interactions.tex}
+
+\input{tables/table_three_corruption_decomposition.tex}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.92\linewidth]{figures/fig2_main_interactions.pdf}
+    \caption{Main Macro-F1 interaction effects with dataset-clustered bootstrap confidence intervals. Positive values indicate combined damage above the additive expectation.}
+    \label{fig:main_interactions}
+\end{figure}
+\FloatBarrier
+
+\subsection{Process controls separate the sampling-frame effect from generic noise and imbalance}
+
+The strongest interpretation risk is that the primary noise + imbalance result might be mistaken for a universal property of label noise and class imbalance. We therefore run a focused process-control experiment at the moderate setting (label noise = 0.2, induced majority ratio = 0.8, missingness = 0) across the 24 PMLB datasets, 9 models, and 5 seeds. The goal is not to add another broad benchmark. It is to determine which part of the effect comes from the studied data-construction process: corrupted labels define the observed labels used by the later imbalance-sampling step.
+
+Table~\ref{tab:process_controls} and Figure~\ref{fig:process_controls} show the result. Under the original observed-label sampling process, the Macro-F1 interaction is +0.184, close to the main-grid moderate-setting result. When imbalance is induced using clean labels and labels are corrupted afterward, the interaction falls to +0.023. This confirms that the large effect is not a general law that noise and imbalance always amplify. It is specifically tied to the sampling frame created when noisy observed labels are used to form class imbalance.
+
+Two additional controls rule out simpler explanations. In the equal-training-size control, clean and single-corruption baselines are downsampled to the same training size as the compound condition; the interaction remains large (+0.166). In the fixed retained-index control, the same retained rows are used for the imbalance baseline and the compound condition; the interaction also remains large (+0.225). These controls show that the original result is not explained only by having fewer training examples or by a generic retained-index mismatch. Instead, the process matters because label corruption and class-ratio construction change the effective clean-class composition together.
+
+\input{tables/table_process_controls.tex}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.86\linewidth]{figures/fig14_process_controls.pdf}
+    \caption{Process-control diagnostics for the moderate noise + imbalance setting. The interaction is large when observed corrupted labels define the imbalance sampling frame, much smaller when imbalance is formed from clean labels and noise is applied afterward, and still large under fixed-index and equal-size controls.}
+    \label{fig:process_controls}
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.78\linewidth]{figures/fig5_order_sensitivity.pdf}
+    \caption{Order sensitivity of the noise + imbalance interaction. This result is part of the main empirical claim: the strong amplification appears when noise precedes imbalance formation; reversing the order makes the interaction nearly additive.}
+    \label{fig:order_sensitivity}
+\end{figure}
+
+% Process-control composition table moved to reproducibility package.
+\FloatBarrier
+
+\subsection{Bounded-scale checks for the additive null}
+
+The raw interaction score is useful because it states the excess drop in the same units as the performance metric. It is nevertheless incomplete by itself because Macro-F1 is bounded between zero and one. When individual drops are large, an additive expected drop can approach or exceed the maximum possible degradation from the clean score. We therefore report bounded-scale scores as co-equal checks rather than as an afterthought. The bounded expected-drop and relative-clean checks preserve the qualitative ordering: noise + imbalance remains the largest positive interaction, the all-three single-factor excess remains positive, missing + imbalance is smaller but positive, and noise + missing is weakly negative. Full normalized-score tables are supplied in the reproducibility package.
+
+Figure~\ref{fig:expected_observed} provides the complementary view. Dataset-level noise + imbalance and all-three points mostly fall above the additive diagonal, while noise + missing is closer to or below it. Thus the main result does not depend on treating raw interaction values alone as the sole evidence.
+
+% Normalized interaction table moved to reproducibility package.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.86\linewidth]{figures/fig7_expected_vs_observed.pdf}
+    \caption{Dataset-level observed versus expected Macro-F1 drops. Each point is averaged over models, seeds, and relevant severity settings within one dataset. The dashed diagonal is the additive baseline; points above it indicate super-additive degradation.}
+    \label{fig:expected_observed}
+\end{figure}
+
+
+\subsection{Statistical stress tests preserve the interaction ordering}
+
+The main inferential analysis uses dataset-level bootstrap intervals because datasets are the primary independent units. As an additional check, Table~\ref{tab:cluster_robust_regression} reports a run-level regression with dataset-clustered standard errors and model fixed effects. Using missing + imbalance as the reference pair, the noise + imbalance contrast is positive and large (+0.147, $p<0.001$), while noise + missing is significantly lower than missing + imbalance (-0.047, $p<0.001$). A mixed-effects check with dataset grouping converges and gives the same qualitative contrasts, although the estimated group variance is near zero in the balanced completed grid; we therefore use the cluster-robust regression as the more conservative run-level supplement.
+
+Weighting and transformed-scale checks also preserve the qualitative ranking: because the completed main grid is balanced, row-equal, dataset-equal, and dataset--model-equal means coincide, and the logit-transformed Macro-F1 analysis keeps noise + imbalance positive and largest. The detailed transformed-scale and weighting tables are supplied in the reproducibility package.
+
+\input{tables/table_cluster_robust_regression.tex}
+% Statistical stress-check table moved to reproducibility package.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.78\linewidth]{figures/fig8_severity_curves.pdf}
+    \caption{Severity-specific noise + imbalance interaction. Mean Macro-F1 interaction increases with label-noise rate and induced majority ratio, showing that the main result is not caused by a single moderate setting.}
+    \label{fig:severity_curves}
+\end{figure}
+
+\subsection{Why the noise-before-imbalance order amplifies harm}
+
+The process-control result is not only a numerical observation; it suggests a data-construction mechanism. When label noise is injected before induced imbalance, the subsequent sampling step operates on already corrupted class labels. Minority evidence is then reduced twice: first by label corruption, which weakens the target signal and can move examples across apparent class boundaries, and then by imbalance formation, which removes non-majority examples and leaves fewer clean minority examples to define the decision boundary. The clean-label control retains substantially more clean minority evidence and yields a much smaller interaction; the detailed composition table is provided in the reproducibility package. Under the original process, a small number of flipped or retained mislabeled minority examples can have disproportionate influence because the minority class is already underrepresented.
+
+This explanation predicts that the excess interaction should grow with the joint severity of noise and imbalance and that datasets retaining less clean minority evidence should show larger excess degradation. Figure~\ref{fig:severity_curves} is consistent with the first prediction: the interaction increases as the label-noise level and induced majority ratio increase. We test the second prediction directly on the main PMLB suite. Table~\ref{tab:pmlb_mechanism} shows that, at 20\% label noise, clean minority retention falls from 0.429 at majority ratio 0.7 to 0.201 at majority ratio 0.9, while the retained mislabeled ratio remains non-trivial (0.193 to 0.167). At the moderate setting used in several validation checks (noise = 0.2, majority ratio = 0.8), the clean minority retention rate is only 0.315 and the effective clean minority ratio is 0.121.
+
+The mechanism is also predictive across datasets. Table~\ref{tab:mechanism_correlation} reports dataset-level associations between mechanism diagnostics and the average noise + imbalance interaction. Clean minority retention is negatively associated with excess degradation (Spearman $\rho=-0.642$, $p<0.001$), while the retained mislabeled minority ratio is strongly positively associated with excess degradation (Spearman $\rho=0.798$, $p<0.001$). Figure~\ref{fig:pmlb_mechanism_correlation} visualizes this relationship. Binary/multiclass diagnostic tables are included in the reproducibility package and show the same qualitative mechanism in both task families.
+
+We also log the same diagnostic on the OpenML replication suite (Figure~\ref{fig:mechanism_diagnostics}; table in the reproducibility package). The OpenML mechanism pattern is directionally consistent with PMLB: as the induced majority ratio becomes more severe, the effective clean-minority ratio decreases while mislabeled examples remain in the training set. The mechanism should not be interpreted as universal causal proof for all real pipelines. Rather, it explains why the studied process -- noisy labels followed by class-ratio formation -- is particularly damaging, and why reversing the order can make the same corruption pair nearly additive.
+
+\input{tables/table_pmlb_mechanism.tex}
+\input{tables/table_mechanism_correlation.tex}
+% Binary/multiclass and OpenML mechanism tables moved to reproducibility package.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.78\linewidth]{figures/fig13_pmlb_mechanism_curves.pdf}
+    \caption{PMLB mechanism diagnostic. Clean minority retention decreases as the induced majority ratio becomes more severe under the primary noise-before-imbalance process.}
+    \label{fig:pmlb_mechanism_curves}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.78\linewidth]{figures/fig11_pmlb_mechanism_correlation.pdf}
+    \caption{PMLB dataset-level mechanism correlation. Datasets retaining less clean minority evidence under noise-before-imbalance tend to exhibit larger noise + imbalance interactions.}
+    \label{fig:pmlb_mechanism_correlation}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.78\linewidth]{figures/fig10_mechanism_diagnostics.pdf}
+    \caption{OpenML mechanism diagnostic. The effective clean-minority ratio decreases as the induced majority ratio becomes more severe, supporting the interpretation that noise-before-imbalance reduces clean minority evidence.}
+    \label{fig:mechanism_diagnostics}
+\end{figure}
+
+
+\subsection{The main finding is stable across metrics}
+
+Figure~\ref{fig:metric_heatmap} summarizes interaction effects across five metrics; the full metric table is provided in the reproducibility package. The noise + imbalance interaction remains strongly positive for Macro-F1 (+0.179), balanced accuracy (+0.167), accuracy (+0.143), MCC (+0.191), and minority recall (+0.230). The minority-recall result is especially important because it directly reflects the class most likely to be harmed by imbalance. Noise + missing remains weakly negative across the same metrics.
+
+% Metric robustness table moved to reproducibility package.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.92\linewidth]{figures/fig3_metric_heatmap.pdf}
+    \caption{Interaction effects across metrics. The strongest amplification is consistently associated with noise + imbalance and the all-three condition, whereas noise + missing is near-additive or mildly sub-additive.}
+    \label{fig:metric_heatmap}
+\end{figure}
+
+\subsection{Accuracy masks imbalance-involving degradation}
+
+Accuracy is substantially more optimistic when imbalance is involved. Across non-imbalance settings, the mean accuracy--Macro-F1 gap is 0.048. When imbalance is involved, the gap increases to 0.098. This does not mean accuracy is useless; it means that, for compound data-quality evaluation, accuracy alone understates class-wise degradation. This supports using Macro-F1, balanced accuracy, MCC, and minority recall alongside accuracy.
+
+\subsection{Model stability and dataset heterogeneity are secondary}
+
+Model-family and dataset-heterogeneity analyses are included in the reproducibility package to avoid overloading the main paper. They do not change the central finding: the process-dependent noise + imbalance interaction is positive across model families and remains positive after excluding related dataset families or capped large datasets. We treat these results as descriptive robustness checks rather than as a universal model ranking.
+
+\subsection{Dataset heterogeneity checks}
+
+Dataset-level summaries show that the noise + imbalance interaction is not driven by a single dataset family. The interaction remains positive after excluding related mfeat datasets and after excluding the only row-capped dataset. Magnitudes vary with natural imbalance, class count, and minority support, which is consistent with the OpenML replication: the process pattern is reproducible, but the effect size is dataset-dependent.
+
+\section{Secondary validation studies}
+
+The main evidential chain is now complete by Section~5: the estimand identifies the interaction, process controls establish process dependence, and mechanism diagnostics explain the sampling-frame effect. The following studies are secondary checks that bound the result across data sources, model choices, missingness variants, tuning, and mitigation. Extended tables are kept here or in the supplementary package for auditability, but they should be read as support for the process-dependent claim rather than as separate headline contributions.
+
+\subsection{External OpenML replication}
+\label{sec:external_replication}
+
+We add an independent replication using 20 OpenML datasets selected from OpenML-CC18-style candidates after excluding obvious overlap with the main PMLB manifest and filtering out datasets that were too small, too high-dimensional, or too high-cardinality for the full factorial protocol. The replication uses the same 9 model families, 64 corruption settings, and 5 seeds, adding 57,600 model evaluations. The goal is not to replace the main PMLB benchmark, but to test whether the qualitative interaction ranking survives on an external tabular source.
+
+Table~\ref{tab:openml_replication} and Figure~\ref{fig:openml_replication} show that it does. The OpenML effect sizes are smaller than the PMLB main benchmark, but the ranking is preserved: noise + imbalance is again the strongest pairwise interaction (+0.072 Macro-F1, 95\% CI [0.044, 0.103]), missing + imbalance is smaller (+0.010), and noise + missing is mildly negative (-0.015). The same qualitative result appears across balanced accuracy, accuracy, MCC, and minority recall, with the full metric table supplied in the reproducibility package. This strengthens the central claim while appropriately narrowing its scope: the effect is reproducible beyond PMLB, but the magnitude is dataset-dependent.
+
+\input{tables/table_openml_replication.tex}
+% OpenML metric table moved to reproducibility package.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.90\linewidth]{figures/fig9_openml_replication.pdf}
+    \caption{Main PMLB benchmark versus independent OpenML replication. The OpenML replication preserves the ranking of interaction effects although the average magnitude is smaller.}
+    \label{fig:openml_replication}
+\end{figure}
+
+\subsection{Boosted-tree extension}
+
+The main analysis includes XGBoost and LightGBM as full boosted-tree extensions in the completed nine-model matrix. Both models use task-specific binary or multiclass objectives. The nine-model result preserves the main pattern: noise + imbalance remains the largest pairwise interaction and the all-three condition shows positive excess over single-factor additivity. This reduces the risk that the finding is an artifact of excluding modern boosted-tree baselines.
+
+\subsection{Imputation sensitivity}
+
+Within the controlled MCAR mechanism studied here, the missingness conclusions are not explained by a single imputation strategy. Under mean, median, and mean-with-indicator variants, noise + missing remains near-additive or slightly sub-additive, while missing + imbalance and all-three settings remain positive. The all-three interaction is approximately +0.200 under all three imputation variants. This result should be read narrowly: under the tested MCAR mechanism and simple imputation families, missingness is not the dominant source of non-additivity compared with the observed-label noise + imbalance process. We do not claim that missingness is generally secondary in real pipelines, especially under MAR, MNAR, temporal, or acquisition-dependent mechanisms.
+
+\subsection{MAR and MNAR missingness sensitivity}
+
+Because MCAR is a comparatively benign missingness mechanism, we add a focused MAR-style sensitivity analysis at the moderate severity level. Missingness probabilities are made class- and feature-dependent: minority-class observations and above-median feature values receive higher missingness probabilities, while the target is not used during imputation or model fitting. This setting is not intended to cover all MAR or MNAR processes, but it tests whether the main missingness-related conclusions collapse under a less benign mechanism.
+
+Under the MAR-style check, noise + missing remains near-additive (-0.005), missing + imbalance becomes more positive (+0.050), and the all-three condition remains positive (+0.164). In the OpenML MNAR-style check, noise + imbalance remains the strongest pairwise interaction (+0.076), while noise + missing remains near-additive (-0.007). The detailed tables are supplied in the reproducibility package. Thus, the claim is not that missingness is harmless or generically less important. The narrow claim is that missingness is not the dominant interaction driver under the MCAR, MAR-style, and MNAR-style mechanisms evaluated in this paper.
+
+% MAR/MNAR missingness tables moved to reproducibility package.
+
+\subsection{Class-dependent label noise}
+
+Symmetric random label noise is simple and useful for controlled benchmarking, but real label errors may be class-dependent. We therefore repeat focused settings using class-dependent label noise. The noise + imbalance interaction remains positive under class-dependent noise (+0.139 Macro-F1), and the all-three interaction remains positive (+0.128). These effects are smaller than under symmetric noise but still practically meaningful and statistically positive at the dataset level.
+
+\subsection{Clean-data tuning sensitivity}
+
+Because default hyperparameters can affect robustness rankings, we run a focused tuning sensitivity on eight OpenML datasets using logistic regression, random forest, XGBoost, and LightGBM. Hyperparameters are selected on the clean training split and then held fixed under corrupted settings, so the experiment tests whether modest clean-data tuning changes the interaction pattern rather than optimizing separately for each corruption. Tuning slightly improves clean Macro-F1 but leaves the key result essentially unchanged: the noise + imbalance interaction is +0.109 for default configurations and +0.108 after tuning. The detailed tuning table is supplied in the reproducibility package. This reduces the risk that the central finding is merely an artifact of default hyperparameters.
+
+% Tuned sensitivity table moved to reproducibility package.
+
+\subsection{Mitigation mini-study}
+
+Although this paper is primarily an evaluation study rather than a new mitigation algorithm, a compact mitigation check helps interpret the practical implications. We evaluate three standard training strategies on the main PMLB suite at the moderate setting: no mitigation, class-weighted training, and random oversampling of the training data. The study uses logistic regression, random forest, XGBoost, and LightGBM over 24 datasets and 5 seeds, producing 8,640 completed mitigation evaluations.
+
+Table~\ref{tab:mitigation} and Figure~\ref{fig:mitigation_summary} show that mitigation helps but does not solve the process interaction. Without mitigation, the noise + imbalance interaction is +0.215. Class weighting reduces it to +0.119 and random oversampling reduces it to +0.113. The same pattern appears for the all-three excess over single-factor additivity. Thus the applied message is not merely to switch on a standard imbalance remedy. Standard remedies reduce excess degradation, but interaction-aware evaluation remains necessary because the joint failure is still not explained by single-corruption effects.
+
+\input{tables/table_mitigation.tex}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.72\linewidth]{figures/fig12_mitigation_summary.pdf}
+    \caption{Mitigation mini-study. Class weighting and random oversampling reduce the noise + imbalance interaction but do not eliminate it.}
+    \label{fig:mitigation_summary}
+\end{figure}
+
+
+\subsection{Secondary validation summary}
+
+The process-control study and order-sensitivity figure are reported with the main result because they are part of the central scientific claim. Figure~\ref{fig:validation_summary} summarizes the remaining focused validations; the corresponding table is supplied in the reproducibility package. These checks are interpreted as bounds on the claim, not as independent central stories. The OpenML replication preserves the qualitative ranking but has a smaller noise + imbalance magnitude, so the paper should not be read as asserting a stable universal effect size. Class-dependent label noise, imputation variants, focused MAR/MNAR-style missingness, and clean-data tuning preserve the main qualitative ranking, but the strongest and most mechanistically supported result remains the process-dependent noise + imbalance effect.
+
+% Validation summary table moved to reproducibility package.
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.92\linewidth]{figures/fig6_validation_summary.pdf}
+    \caption{Summary of focused validation checks. The process-control and order checks are the central safeguards; the remaining entries bound the interpretation across model families, noise variants, missingness mechanisms, imputation choices, external datasets, and tuning.}
+    \label{fig:validation_summary}
+\end{figure}
+
+\section{Discussion}
+
+The central implication is that single-corruption robustness curves can be misleading for tabular ML, but only after the data-construction process is specified. A model that appears moderately robust to label noise and moderately robust to imbalance may fail severely when the two occur together under an observed-label sampling process. The problem is not simply that more corruption causes more degradation. Some corruptions change the effective sampling frame of the others. In the primary process studied here, label errors weaken the target signal before class-ratio construction; induced imbalance then reduces the amount of clean non-majority evidence available to correct or dilute that noise. The clean-label control shows that the large interaction is sharply reduced when the retained imbalanced set is defined before labels are corrupted. This combination of order, sampling frame, and class composition is the main scientific finding.
+
+The process-control results also change how compound robustness should be interpreted. It would be tempting to state that noise + imbalance is inherently super-additive. Our results do not support that broad claim. Instead, they support a more precise claim: label noise and imbalance can be strongly super-additive when noisy observed labels define later imbalance formation. The fixed-index and equal-size controls show that the effect is not only a training-size or row-index artifact, while the clean-label control shows that the sampling frame is essential. Real pipelines may not follow a clean binary ordering; annotation, filtering, cohort construction, and sampling can be intertwined. The order and process-control experiments should therefore be read as controlled process probes rather than as an exhaustive taxonomy of all possible joint corruption mechanisms.
+
+The model-ranking result should also be interpreted carefully. Boosted-tree methods have strong clean-data performance, consistent with modern tabular ML benchmarks \citep{grinsztajn2022tree,mcelfresh2023tabzilla}. However, clean-data strength is not the same as degradation stability, and smaller absolute drop can partly reflect lower clean performance. Relative-drop analysis reduces the apparent separation between several model families. For deployment, both clean score and degradation profile should therefore be reported.
+
+The external OpenML replication adds an important qualification. It confirms the direction and ranking of the main interaction pattern, but the magnitude is smaller than in PMLB. This is valuable because it prevents overclaiming: the paper supports a process-dependent risk pattern, not a universal numerical constant. The OpenML result also suggests that dataset properties such as natural imbalance, class count, minority support, and separability influence how strongly the interaction appears.
+
+The mitigation study adds a practical qualification. Class weighting and random oversampling reduce the excess noise + imbalance interaction, but neither removes it. This suggests that mitigation should be evaluated under the compound process itself rather than validated only on isolated imbalance or isolated noise. The result is also consistent with the mechanism diagnostic: resampling or weighting can increase the influence of minority examples, but it does not automatically distinguish clean minority evidence from retained mislabeled minority evidence.
+
+Finally, the metric-masking result reinforces a standard but often ignored point: when imbalance is part of the problem, accuracy cannot be the sole metric. Accuracy remains informative, but it can hide minority-class collapse. Macro-F1, balanced accuracy, MCC, and minority recall should be reported when evaluating compound data-quality failures.
+
+\subsection{Practical recommendations}
+
+For practitioners, the results suggest a short interaction-aware testing protocol rather than an exhaustive factorial benchmark in every deployment. If labels may be noisy and class representation is skewed, the first priority should be a noise + imbalance check with the corruption order matched to the real data pipeline, especially when row filtering, undersampling, case enrichment, or benchmark construction uses observed labels. If missing values are common, missing + imbalance and all-three checks should be run under the expected missingness mechanism and imputation strategy; our results do not license a general claim that missingness is secondary in all domains. Accuracy should be reported only alongside class-sensitive metrics. When a strong interaction appears, mitigation should be tested under the same compound process; in our compact study, class weighting and random oversampling reduce but do not eliminate the excess interaction. Table~\ref{tab:practical_recommendations} summarizes these recommendations.
+
+\input{tables/table_practical_recommendations.tex}
+
+
+\section{Threats to validity}
+
+\textbf{Synthetic corruptions and process specificity.} The corruptions are controlled rather than naturally observed. This enables matched comparison against an additive null, but real data failures may be structured in more complex ways. The primary finding should not be generalized to all naturally occurring label noise or all forms of selection bias. It applies most directly to pipelines in which labels are already imperfect before filtering, sampling, or class-ratio construction uses the observed labels. The clean-label, fixed-index, and equal-size controls narrow this interpretation but do not cover all possible annotation and sampling workflows.
+
+\textbf{Missingness mechanism.} Missingness is secondary to the main noise + imbalance story. The main missingness mechanism is MCAR, which is controlled and comparatively benign. The imputation ablation and focused MAR/MNAR-style checks reduce dependence on one preprocessing choice, but they do not cover all mechanisms by which missingness may correlate with label quality, acquisition process, unobserved variables, or time-dependent data collection. We therefore avoid broad claims about missingness in real deployment pipelines.
+
+\textbf{Dataset scope.} The main benchmark uses 24 PMLB datasets. This is sufficient for a focused factorial study, but it is smaller than very large tabular benchmark suites. We address this by adding a 20-dataset OpenML replication and by reporting the full retained PMLB manifest, selection audit, and representative exclusions. The replication preserves the qualitative ranking but shows smaller effect sizes, so the conclusion should be read as a reproducible process-dependent pattern rather than a universal magnitude. Some datasets in both PMLB and OpenML are established benchmarks that may have influenced model development indirectly. We therefore avoid claiming universal model rankings and provide dataset-level, family-exclusion, external-replication, and process-control checks.
+
+\textbf{Model tuning and mitigation.} Models are not exhaustively tuned under each corruption condition. This is intentional because the study measures raw robustness under a standardized protocol, but corruption-aware tuning could change absolute rankings. The focused clean-data tuning check reduces this concern for the main interaction, and the mitigation mini-study shows that class weighting and oversampling reduce but do not eliminate excess degradation. More specialized noise-cleaning or robust-loss methods could further change applied outcomes and should be studied separately.
+
+\textbf{Interaction definition.} The additive null is a useful reference, not a law of nature. Negative interaction can reflect saturation, overlap, or metric ceiling effects; positive interaction can reflect genuine amplification or changed class composition. Because metrics such as Macro-F1 are bounded, we report raw, bounded expected-drop, and relative-clean interaction scores and interpret them as empirical deviations from a transparent baseline rather than as causal effect estimates.
+
+\textbf{Pipeline scope.} The experiments focus on supervised tabular classification with standard train/test splits and common scikit-learn-style pipelines. They do not cover high-cardinality categorical systems with specialized encoders, time-dependent tabular data, semi-supervised learning, active learning, foundation-model tabular representations, or pipelines where missingness, annotation, filtering, and class-ratio formation occur simultaneously rather than sequentially. These settings may require different process controls.
+
+\section{Conclusion}
+
+This paper examined whether common tabular data-quality failures combine additively under a matched empirical interaction estimand. Across 24 PMLB datasets, 9 model families, 64 corruption settings, and multiple validation studies, the answer is no. The strongest harmful interaction occurs between label noise and class imbalance under the primary corruption process, where label noise precedes imbalance formation and the imbalance step is computed using observed corrupted labels. The effect is visible across Macro-F1, balanced accuracy, MCC, accuracy, and minority recall, remains under class-dependent label noise, and persists under bounded expected-drop and relative-clean interaction checks. Missingness analyses are narrower: under the tested MCAR, MAR-style, and MNAR-style mechanisms, missingness is not the dominant interaction driver, but this should not be generalized to all missing-data processes.
+
+The result is also explicitly process-dependent. Reversing the corruption order makes the noise + imbalance interaction nearly additive, and the final process-control study shows why: when imbalance is induced from clean labels and label noise is applied afterward, the moderate-setting interaction falls to +0.023, whereas the observed-label process gives +0.184. Fixed-retained-index and equal-training-size controls keep the interaction large, indicating that the result is not merely a training-size artifact or a generic retained-row mismatch. The independent OpenML replication confirms the qualitative ranking while producing smaller absolute effects, so the paper supports a process-dependent risk pattern rather than a universal effect size. PMLB and OpenML mechanism diagnostics support the interpretation that noise-before-imbalance reduces clean minority evidence while retaining mislabeled examples. Clean-data hyperparameter tuning does not remove the effect, and standard class weighting or random oversampling reduces but does not eliminate it. The practical message is therefore sharp and limited: compound-corruption robustness cannot be inferred safely from single-corruption tests when noisy observed labels influence later class-ratio construction. Robust tabular evaluation should report interaction effects, corruption order, sampling frame, missingness mechanism, metric choice, mitigation response, dataset scope, and reproducibility materials.
+
+\appendix
+\section{Supplementary reproducibility materials}
+
+The supplementary reproducibility package is organized as a self-contained audit archive. It contains all run-level result files used to generate the reported tables and figures: the completed 69,120-row main PMLB benchmark, the 57,600-row OpenML replication, order-sensitivity outputs, class-dependent-noise outputs, imputation-ablation outputs, MAR and MNAR-style missingness outputs, clean-data tuning outputs, the 8,640-row mitigation study, and the final process-control output used for the final process-control table and figure. It also contains processed interaction tables, clustered-statistics tables, dataset manifests, dataset screening and selection-audit tables, mechanism-diagnostic outputs, figure inputs, manuscript figure sources, analysis notebooks/scripts, and environment files. Public PMLB and OpenML datasets are identified by manifest, loader instructions, and dataset IDs rather than redistributed. A file-level SHA-256 manifest is included so that the archive can be checked after deposit.
+
+The OpenML dataset manifest is included in the reproducibility package rather than expanded in the main paper.
+
+\section*{CRediT authorship contribution statement}
+Anonymous author(s): Conceptualization, Methodology, Software, Formal analysis, Validation, Writing -- original draft, Writing -- review and editing.
+
+\section*{Declaration of competing interest}
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Data and code availability}
+All PMLB datasets used in the main benchmark are publicly available through the PMLB interface, and all external replication datasets are publicly available through OpenML. The full reproducibility package is publicly available at \url{https://github.com/NazimRiyadh/Process-Dependent-Noise-Imbalance-Interactions-in-Tabular-Machine-Learning}. The repository includes every run-level result file used to compute the reported tables and figures, processed interaction tables, dataset manifests, screening records, figure inputs, executable notebooks/scripts, package/version information, and SHA-256 checksums. It includes the completed PMLB main benchmark, OpenML replication, order-sensitivity outputs, class-dependent-noise outputs, imputation-ablation outputs, MAR/MNAR-style sensitivity outputs, clean-data tuning outputs, mitigation outputs, and process-control outputs. Public datasets are not redistributed; they are referenced by manifest, dataset identifiers, and loader instructions. A snapshot of the same package is supplied with the submission as supplementary material.
+
+\section*{Funding}
+This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+
+\section*{Declaration of generative AI and AI-assisted technologies in the writing process}
+During preparation of this manuscript, the authors used AI-assisted writing support to improve organization, language clarity, and formatting. The authors reviewed and edited the content and take full responsibility for the final manuscript.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

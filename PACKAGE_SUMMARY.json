@@ -1,6 +1,7 @@
 {
-  "package": "Q1_defense_v13_reproducibility_package",
-  "n_files": 101,
-  "contains_run_level_results": true,
-  "public_datasets_redistributed": false
+  "package_label": "final_submission_reproducibility_package_v14",
+  "public_repository": "https://github.com/NazimRiyadh/Process-Dependent-Noise-Imbalance-Interactions-in-Tabular-Machine-Learning",
+  "statement": "All run-level result files used to compute the reported tables and figures are included in this archive.",
+  "generated_utc": "2026-06-17T13:16:56Z",
+  "file_count": 104
 }

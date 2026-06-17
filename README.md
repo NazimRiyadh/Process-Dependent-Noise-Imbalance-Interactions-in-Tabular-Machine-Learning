@@ -1,4 +1,4 @@
-# Q1 Defense Reproducibility Package - v13
+# Q1 Defense Reproducibility Package
 
 This archive accompanies the manuscript:
 
@@ -6,12 +6,12 @@ This archive accompanies the manuscript:
 
 ## What is fully included
 
-This package includes all run-level result files and processed analysis files used to generate the reported tables and figures in the v13 manuscript. In particular, it includes:
+This package includes all run-level result files and processed analysis files used to generate the reported tables and figures in the final manuscript. In particular, it includes:
 
 1. Main PMLB benchmark outputs: completed 69,120-row nine-model benchmark and derived interaction summaries.
 2. External OpenML replication outputs: completed 57,600-row replication and derived interaction summaries.
-3. V11 process-control outputs: repaired raw condition metrics, interaction summaries, weighting summaries, bootstrap summaries, and composition diagnostics.
-4. V10 PMLB mechanism/statistical/mitigation outputs: PMLB mechanism diagnostics, cluster-robust and mixed-model outputs, logit-scale checks, mitigation raw results and summaries.
+3. Final process-control outputs: repaired raw condition metrics, interaction summaries, weighting summaries, bootstrap summaries, and composition diagnostics.
+4. PMLB mechanism/statistical/mitigation outputs: PMLB mechanism diagnostics, cluster-robust and mixed-model outputs, logit-scale checks, mitigation raw results and summaries.
 5. Missingness sensitivity outputs: imputation-ablation, MAR/MNAR-style sensitivity outputs available from the executed notebooks/packages.
 6. Clean-data tuning sensitivity outputs: raw tuned-sensitivity results, selected hyperparameters, and processed drops/interactions.
 7. Dataset manifests and screening records for PMLB and OpenML.
@@ -38,7 +38,10 @@ The public PMLB and OpenML datasets themselves are not redistributed. They are r
 
 All run-level result files used to compute the reported tables and figures are included in this archive. Public datasets are referenced through PMLB/OpenML manifests rather than redistributed. The `SHA256SUMS.txt` file lists hashes for all files in the archive.
 
-## Recommended public deposit
+## Public repository
 
-For a non-anonymous submission or after acceptance, upload this archive to a DOI-bearing repository such as Zenodo, Figshare, OSF, or an institutional repository, and replace the anonymous placeholder in the manuscript with the permanent URL/DOI.
-"# Process-Dependent-Noise-Imbalance-Interactions-in-Tabular-Machine-Learning" 
+A public copy of the reproducibility package is available at:
+
+https://github.com/NazimRiyadh/Process-Dependent-Noise-Imbalance-Interactions-in-Tabular-Machine-Learning
+
+For archival stability, the authors may additionally create a DOI-bearing release through Zenodo, Figshare, OSF, or an institutional repository.
